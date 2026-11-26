@@ -1,0 +1,89 @@
+import os
+import gradio as gr
+from google import genai
+
+# Gemini API connection
+api_key = os.environ.get("GEMINI_API_KEY", "")
+client = genai.Client(api_key=api_key) if api_key else None
+
+MODEL = "gemini-2.5-flash"
+
+def ask_ai(prompt):
+    if not client:
+        return "Please add your Gemini API key in the app settings."
+    try:
+        response = client.models.generate_content(
+            model=MODEL,
+            contents=prompt
+        )
+        return response.text or "No response received."
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+def chat(message, history):
+    return ask_ai(message)
+
+def writer(text, mode):
+    return ask_ai(f"Write a {mode} for the following topic:\n{text}")
+
+def planner(task):
+    return ask_ai(
+        f"Create a simple daily plan with priorities and timings for:\n{task}"
+    )
+
+def youtube(topic):
+    return ask_ai(
+        f"Create a YouTube Shorts title, description, 10 hashtags "
+        f"and 10 tags for this topic:\n{topic}"
+    )
+
+with gr.Blocks(title="ONEWORLD AI") as app:
+    gr.Markdown("# 🌍 ONEWORLD AI")
+    gr.Markdown("Your Personal AI Assistant")
+
+    with gr.Tab("💬 AI Chat"):
+        chatbot = gr.ChatInterface(
+            fn=chat,
+            title="AI Chat",
+            description="Ask anything and get AI answers."
+        )
+
+    with gr.Tab("✍️ AI Writer"):
+        writer_input = gr.Textbox(label="Enter your topic", lines=4)
+        writer_mode = gr.Dropdown(
+            ["Email", "Message", "Document", "Story"],
+            value="Message",
+            label="Writing Type"
+        )
+        writer_button = gr.Button("Generate")
+        writer_output = gr.Textbox(label="AI Writing Result", lines=8)
+        writer_button.click(
+            writer, [writer_input, writer_mode], writer_output
+        )
+
+    with gr.Tab("📅 Daily Planner"):
+        planner_input = gr.Textbox(
+            label="What do you want to do today?", lines=4
+        )
+        planner_button = gr.Button("Create My Plan")
+        planner_output = gr.Textbox(label="Your Daily Plan", lines=8)
+        planner_button.click(
+            planner, planner_input, planner_output
+        )
+
+    with gr.Tab("▶️ YouTube Assistant"):
+        youtube_input = gr.Textbox(
+            label="Enter your video topic", lines=3
+        )
+        youtube_button = gr.Button("Create YouTube Content")
+        youtube_output = gr.Textbox(
+            label="Title, Description, Hashtags and Tags", lines=10
+        )
+        youtube_button.click(
+            youtube, youtube_input, youtube_output
+        )
+
+app.launch(
+    server_name="0.0.0.0",
+    server_port=int(os.environ.get("PORT", 7860))
+)
